@@ -12,8 +12,8 @@ mtx, dist = utils.calibrateCamera(fpath, 9, 5, manualCheck = manualCheck)
 
 # Step 2: Calculate perspective matrix M.
 # Apply a distortion correction to raw images.
-# straight_line_image = mpimg.imread('.\straight_lines1.jpg')
-straight_line_image = mpimg.imread('test_images/challenge01.jpg')
+straight_line_image = mpimg.imread('test_images/straight_lines1.jpg')
+# straight_line_image = mpimg.imread('test_images/challenge01.jpg')
 undistorted = cv2.undistort(straight_line_image, mtx, dist)
 
 ### Manually measured 4 points (255, 683), (1052, 683), (594, 448), (684, 448)

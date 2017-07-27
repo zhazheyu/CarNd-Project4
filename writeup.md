@@ -88,7 +88,7 @@ I used a combination of color and gradient thresholds to generate a binary image
 
 ![alt text][image3]
 
-Based on the above image, the following channel are selected: v-channel x-derivative, l-channel, and b-channel.  The the image will be converted as binary as following:
+Based on the above image, the following channel are selected: l-channel, and b-channel. x-derivative v-channel was removed after fine-tuning.  The the image will be converted as binary as following:
 
 ![alt text][image5]
 
@@ -116,7 +116,12 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./project_video_output.mp4)
+
+
+#### 2. Provide a link to chanllenge video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+
+Here's a [link to my video result](./chanllenge_video_output.mp4)
 
 ---
 

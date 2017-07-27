@@ -122,7 +122,7 @@ def createThresholdBinary(img, v_thresh=(170, 255), hx_thresh=(20, 80), manualCh
         f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
         ax1.set_title('Stacked thresholds')
         ax1.imshow(color_binary)
-        ax2.set_title('Combined S channel and gradient thresholds')
+        ax2.set_title('Combined l- and b- channel')
         ax2.imshow(combined_binary, cmap='gray')
         ax3.set_title('Orginal image')
         ax3.imshow(img)
