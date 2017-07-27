@@ -4,7 +4,7 @@ import utils
 import cv2
 import numpy as np
 
-manualCheck = True
+manualCheck = False
 
 # Step 1: Calibrate camera
 fpath = '.\camera_cal\calibration1.jpg'
@@ -76,16 +76,16 @@ utils.drawDetectedBoundary(test_image, inverseM, left_fit, right_fit)
 
 
 # # Step 7: Generate video
-# from moviepy.editor import VideoFileClip
+from moviepy.editor import VideoFileClip
 
-# left_fit = None
-# right_fit = None
-# # white_output = 'challenge_video_output.mp4'
-# white_output = 'temp_output.mp4'
-# # To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
-# #clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,2)
-# # clip1 = VideoFileClip("challenge_video.mp4")
-# clip1 = VideoFileClip("project_video.mp4")
-# white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
-# # %time white_clip.write_videofile(white_output, audio=False)
-# white_clip.write_videofile(white_output, audio=False)
+left_fit = None
+right_fit = None
+# white_output = 'harder_challenge_video_output.mp4'
+white_output = 'project_video_output.mp4'
+# To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
+#clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,2)
+# clip1 = VideoFileClip("harder_challenge_video.mp4")
+clip1 = VideoFileClip("project_video.mp4")
+white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
+# %time white_clip.write_videofile(white_output, audio=False)
+white_clip.write_videofile(white_output, audio=False)
