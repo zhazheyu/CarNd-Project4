@@ -4,11 +4,11 @@ import utils
 import cv2
 import numpy as np
 
-manualCheck = False
+manualCheck = True
 
 # Step 1: Calibrate camera
-fpath = '.\camera_cal\calibration1.jpg'
-mtx, dist = utils.calibrateCamera(fpath, 9, 5, manualCheck = manualCheck)
+fpath = '.\camera_cal\calibration2.jpg'
+mtx, dist = utils.calibrateCamera(fpath, 9, 6, manualCheck = manualCheck)
 
 # Step 2: Calculate perspective matrix M.
 # Apply a distortion correction to raw images.
@@ -41,13 +41,17 @@ def process_image(img):
     global right_fit
 
     undistorted = cv2.undistort(img, mtx, dist)
-    warpped = utils.getPerspectiveBinary(undistorted, M)
+    warpped = utils.getPerspectiveBinary(undistorted, M, manualCheck = manualCheck)
     margin = 50
     if left_fit != None and right_fit != None:
-        left_fit, right_fit = utils.detectLanesWithPreFram(warpped, 25, left_fit, right_fit)
+        left_fit_c, right_fit_c = utils.detectLanesWithPreFram(warpped, 20, left_fit, right_fit)
+        if utils.needRecalculateLeftAndRightLane(left_fit, right_fit):
+            left_fit_c, right_fit_c = utils.detectLanesWithoutPreFrame(warpped, margin, 8, visualization = manualCheck)
     else:
-        print("detectLanesWithoutPreFrame is executed")
-        left_fit, right_fit = utils.detectLanesWithoutPreFrame(warpped, margin, 7, visualization = manualCheck)
+        left_fit_c, right_fit_c = utils.detectLanesWithoutPreFrame(warpped, margin, 8, visualization = manualCheck)
+        
+    left_fit = utils.smooth(left_fit, left_fit_c, coeficient = 1)
+    right_fit = utils.smooth(right_fit, right_fit_c, coeficient = 1)
 
     # Warp the detected lane boundaries and draw back onto the original image.
     return utils.drawDetectedBoundary(undistorted, inverseM, left_fit, right_fit)
@@ -75,17 +79,19 @@ utils.detectLanesWithPreFram(warpped, margin, left_fit, right_fit, visualization
 utils.drawDetectedBoundary(test_image, inverseM, left_fit, right_fit)
 
 
-# # Step 7: Generate video
-from moviepy.editor import VideoFileClip
+manualCheck = False
 
-left_fit = None
-right_fit = None
-# white_output = 'harder_challenge_video_output.mp4'
-white_output = 'project_video_output.mp4'
-# To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
-#clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,2)
-# clip1 = VideoFileClip("harder_challenge_video.mp4")
-clip1 = VideoFileClip("project_video.mp4")
-white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
-# %time white_clip.write_videofile(white_output, audio=False)
-white_clip.write_videofile(white_output, audio=False)
+# # Step 7: Generate video
+# from moviepy.editor import VideoFileClip
+
+# left_fit = None
+# right_fit = None
+# # white_output = 'challenge_video_output.mp4'
+# white_output = 'project_video_output.mp4'
+# # To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
+# #clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,2)
+# # clip1 = VideoFileClip("challenge_video.mp4")
+# clip1 = VideoFileClip("project_video.mp4")
+# white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
+# # %time white_clip.write_videofile(white_output, audio=False)
+# white_clip.write_videofile(white_output, audio=False)

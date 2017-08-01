@@ -57,15 +57,19 @@ def get_image(twoArray):
     return np.dstack((twoArray, twoArray, twoArray))
     
     
-def createThresholdBinary(img, v_thresh=(170, 255), hx_thresh=(20, 80), manualCheck = False):
+def createThresholdBinary(img, v_thresh=(210, 255), b_thresh=(140, 255), hx_thresh=(20, 80), manualCheck = False):
     img = np.copy(img)
     # Convert to HSV color space and separate the V channel
-    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV).astype(np.float)
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS).astype(np.float)
-    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB).astype(np.float)
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    luv = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+    # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float)
+    # hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS).astype(np.float)
+    # lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float)
     
     if manualCheck:
-        f, axarr = plt.subplots(3, 3, figsize=(10,10))
+        f, axarr = plt.subplots(4, 3, figsize=(10,10))
         axarr[0, 0].set_title('HSV h-channel')
         axarr[0, 0].imshow(get_image(hsv[:,:,0]))
         axarr[0, 1].set_title('HSV s-channel')
@@ -86,14 +90,22 @@ def createThresholdBinary(img, v_thresh=(170, 255), hx_thresh=(20, 80), manualCh
         axarr[2, 1].imshow(get_image(lab[:,:,1]))
         axarr[2, 2].set_title('LAB b-channel')
         axarr[2, 2].imshow(get_image(lab[:,:,2]))
+        
+        axarr[3, 0].set_title('LUV l-channel')
+        axarr[3, 0].imshow(get_image(luv[:,:,0]))
+        axarr[3, 1].set_title('LUV U-channel')
+        axarr[3, 1].imshow(get_image(luv[:,:,1]))
+        axarr[3, 2].set_title('LUV v-channel')
+        axarr[3, 2].imshow(get_image(luv[:,:,2]))
         plt.show()
     
     v_channel = hsv[:, :, 2]
-    l_channel = lab[:, :, 0]
+    l_channel = luv[:, :, 0]
     b_channel = lab[:, :, 2]
+    s_channel = hls[:, :, 2]
     
     # Sobel x for b-channel
-    sobelx = cv2.Sobel(b_channel, cv2.CV_64F, 1, 0) # Take the derivative in x
+    sobelx = cv2.Sobel(s_channel, cv2.CV_64F, 1, 0) # Take the derivative in x
     abs_sobelx = np.absolute(sobelx) # Absolute x derivative to accentuate lines away from horizontal
     scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
     
@@ -101,21 +113,27 @@ def createThresholdBinary(img, v_thresh=(170, 255), hx_thresh=(20, 80), manualCh
     sxbinary = np.zeros_like(scaled_sobel)
     sxbinary[(scaled_sobel >= hx_thresh[0]) & (scaled_sobel <= hx_thresh[1])] = 1
     
-    # Threshold color channel (vue)
-    v_binary = np.zeros_like(v_channel)
-    v_binary[(v_channel >= v_thresh[0]) & (v_channel <= v_thresh[1])] = 1
+    # Threshold color channel (b-channel)
+    b_binary = np.zeros_like(b_channel)
+    b_binary[(b_channel >= b_thresh[0]) & (b_channel <= b_thresh[1])] = 1
+    # f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
+    # ax1.imshow(b_channel)
+    # ax2.imshow(b_binary)
+    # plt.show()
     
     # Threshold color channel (l-channel)
     l_binary = np.zeros_like(l_channel)
     l_binary[(l_channel >= v_thresh[0]) & (l_channel <= v_thresh[1])] = 1
+    # plt.imshow(l_binary)
+    # plt.show()
     # Stack each channel
     # Note color_binary[:, :, 0] is all 0s, effectively an all black image. It might
     # be beneficial to replace this channel with something else.
-    color_binary = np.dstack(( l_binary, v_binary, np.zeros_like(sxbinary)))
+    color_binary = np.dstack(( l_binary, b_binary, sxbinary)).astype(np.float)
     
     # Combine the two binary thresholds
     combined_binary = np.zeros_like(sxbinary)
-    combined_binary[(v_binary == 1) | (l_binary == 1)] = 1
+    combined_binary[(b_binary == 1) | (l_binary == 1) | (sxbinary == 1)] = 1
 
     # Plotting thresholded images
     if manualCheck:
@@ -130,22 +148,22 @@ def createThresholdBinary(img, v_thresh=(170, 255), hx_thresh=(20, 80), manualCh
 
     return combined_binary, color_binary
     
-def getUndistortedCroppedPerspectiveBinary(img, mtx, dist, M, manualCheck = False):
-    undistorted = cv2.undistort(img, mtx, dist)
-    combined_binary, color_binary = createThresholdBinary(undistorted, manualCheck = manualCheck)
-    cropped = crop_img(combined_binary)
-    img_shape = (cropped.shape[1], cropped.shape[0])
-    warpped = cv2.warpPerspective(cropped, M, img_shape, flags=cv2.INTER_LINEAR)
-    if manualCheck:
-        f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
-        ax1.set_title('Original')
-        ax1.imshow(img)
-        ax2.set_title('Cropped')
-        ax2.imshow(cropped)
-        ax3.set_title('Cropped and Warpped')
-        ax3.imshow(warpped, cmap='gray')
-        plt.show()
-    return warpped;
+# def getUndistortedCroppedPerspectiveBinary(img, mtx, dist, M, manualCheck = False):
+    # undistorted = cv2.undistort(img, mtx, dist)
+    # combined_binary, color_binary = createThresholdBinary(undistorted, manualCheck = manualCheck)
+    # cropped = crop_img(combined_binary)
+    # img_shape = (cropped.shape[1], cropped.shape[0])
+    # warpped = cv2.warpPerspective(cropped, M, img_shape, flags=cv2.INTER_LINEAR)
+    # if manualCheck:
+        # f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
+        # ax1.set_title('Original')
+        # ax1.imshow(img)
+        # ax2.set_title('Cropped')
+        # ax2.imshow(cropped)
+        # ax3.set_title('Cropped and Warpped')
+        # ax3.imshow(warpped, cmap='gray')
+        # plt.show()
+    # return warpped;
     
 def getUndistortedPerspectiveBinary(img, mtx, dist, M, manualCheck = False):
     undistorted = cv2.undistort(img, mtx, dist)
@@ -153,20 +171,34 @@ def getUndistortedPerspectiveBinary(img, mtx, dist, M, manualCheck = False):
     return warpped;
     
 def getPerspectiveBinary(undistorted, M, manualCheck = False):
+    clahe = getCLAHE(undistorted)
     img_shape = (undistorted.shape[1], undistorted.shape[0])
-    warpped = cv2.warpPerspective(undistorted, M, img_shape, flags=cv2.INTER_LINEAR)
+    warpped = cv2.warpPerspective(clahe, M, img_shape, flags=cv2.INTER_LINEAR)
     combined_binary, color_binary = createThresholdBinary(warpped, manualCheck = manualCheck)
     # warpped = cv2.warpPerspective(combined_binary, M, img_shape, flags=cv2.INTER_LINEAR)
     if manualCheck:
-        f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
-        ax1.set_title('undistorted')
-        ax1.imshow(undistorted)
-        ax2.set_title('binary')
-        ax2.imshow(combined_binary)
-        ax3.set_title('Warpped')
-        ax3.imshow(warpped, cmap='gray')
+        f, axarr = plt.subplots(2, 2, figsize=(20,10))
+        axarr[0, 0].set_title('undistorted')
+        axarr[0, 0].imshow(undistorted)
+        axarr[0, 1].set_title('CLAHE')
+        axarr[0, 1].imshow(clahe)
+        axarr[1, 0].set_title('Warpped')
+        axarr[1, 0].imshow(warpped)
+        axarr[1, 1].set_title('binary')
+        axarr[1, 1].imshow(combined_binary)
         plt.show()
     return combined_binary;
+    
+    
+def getCLAHE(img):
+    ## Reference: https://stackoverflow.com/questions/24341114/simple-illumination-correction-in-images-opencv-c/24341809#24341809
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    # create a CLAHE object (Arguments are optional).
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    cl1 = clahe.apply(lab[:, :, 0])
+    lab[:,:,0] = cl1
+    res = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+    return res
     
     
 def window_mask(width, height, img_ref, center, level):
@@ -247,6 +279,7 @@ def display_window(window_centroids, warped, window_width, window_height, margin
     plt.show()
     
 def detectLanesWithoutPreFrame(binary_warped, margin = 50, nwindows = 7, minpix = 20, visualization = False):
+    print("detectLanesWithoutPreFrame is executed")
     histogram = np.sum(binary_warped[int(binary_warped.shape[0]*3/4):,:], axis=0)
     # Create an output image to draw on and  visualize the result
     out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
@@ -288,8 +321,13 @@ def detectLanesWithoutPreFrame(binary_warped, margin = 50, nwindows = 7, minpix 
         # If you found > minpix pixels, recenter next window on their mean position
         if len(good_left_inds) > minpix:
             leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
+            # leftx_current = (leftx_current - leftx_base)*2 + leftx_base
         if len(good_right_inds) > minpix:        
             rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
+            # rightx_current = (rightx_current - rightx_base)*2 + rightx_base
+            
+        leftx_base = leftx_current
+        rightx_base = rightx_current
 
     # Concatenate the arrays of indices
     left_lane_inds = np.concatenate(left_lane_inds)
@@ -377,9 +415,9 @@ def detectLanesWithPreFram(binary_warped, margin, left_fit, right_fit, visualiza
     
     return left_fit_current, right_fit_current
     
-def calculateCurvature(left_fit, right_fit, y_eval = 280):
-    left_curv = ((1 + (2*left_fit[0]*y_eval + left_fit[1])**2)**1.5) / np.absolute(2*left_fit[0])
-    right_curv = ((1 + (2*right_fit[0]*y_eval + right_fit[1])**2)**1.5) / np.absolute(2*right_fit[0])
+def calculateCurvature(left_fit, right_fit, y_eval = 700, ym_per_pix = 30/720):
+    left_curv = ((1 + (2*left_fit[0]*y_eval*ym_per_pix + left_fit[1])**2)**1.5) / np.absolute(2*left_fit[0])
+    right_curv = ((1 + (2*right_fit[0]*y_eval*ym_per_pix + right_fit[1])**2)**1.5) / np.absolute(2*right_fit[0])
     return left_curv, right_curv
     
 
@@ -409,7 +447,7 @@ def drawDetectedBoundary(undistorted, inverseM, left_fit, right_fit, ym_per_pix 
     
     ## Put Text about off line distance and curvature
     font = cv2.FONT_HERSHEY_SIMPLEX
-    off_center = round(((left_fitx[-1] + right_fitx[-1])/2 - 640) * xm_per_pix * 1000)
+    off_center = round(((left_fitx[-1] + right_fitx[-1])/2 - 640) * xm_per_pix * 100)
     str1 = str('distance from center: ' + str(off_center) + 'cm')
     cv2.putText(result, str1 , (430,630), font, 1, (0,0,255), 2, cv2.LINE_AA)
     
@@ -425,3 +463,30 @@ def drawDetectedBoundary(undistorted, inverseM, left_fit, right_fit, ym_per_pix 
     # plt.show()
     
     return result
+
+def needRecalculateLeftAndRightLane(left_fit, right_fit, y_eval = 700, tolerance = 100, dist = 500, midpoint = 640):
+    ## based pixel points for left and right lanes
+    left_base = left_fit[0] * y_eval**2 + left_fit[1] * y_eval + left_fit[2]
+    right_base = right_fit[0] * y_eval ** 2 + right_fit[1] * y_eval + right_fit[2]
+    # print(left_base, right_base)
+    # if (abs(left_base - right_base) > tolerance) :
+        # return True
+    if left_base > midpoint:
+        return True
+    if right_base < midpoint:
+        return True
+    return False
+    
+    
+def smooth(prev, curr, coeficient = 0.4):
+    '''
+     exponential smoothing
+    :param prev: old value
+    :param curr: new value
+    :param coeficient: smoothing coef.
+    :return:
+    '''
+    if prev == None:
+        return curr
+    else:
+        return curr*coeficient + prev*(1-coeficient)

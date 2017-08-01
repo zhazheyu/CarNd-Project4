@@ -26,6 +26,8 @@ The goals / steps of this project are the following:
 [image5]: ./examples/Image_process.png "Image process"
 [image6]: ./examples/fit_straight_line.png "Fit without previous image"
 [image7]: ./examples/drawbackresult.png "draw back image"
+[image8]: ./examples/pre_process.png "Preprocess"
+
 [video1]: ./project_video_output.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -84,25 +86,47 @@ I verified that my perspective transform was working as expected by drawing the 
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps Section 4: Use color transforms, gradients, etc., to create a thresholded binary image in IPython notebook).  Here's an example image on different color map channel
+First, in order to reduce the cause of lightness effect, CLAHE method is used to enhance contrast on different lightness image. 
+https://stackoverflow.com/questions/24341114/simple-illumination-correction-in-images-opencv-c/24341809#24341809
+Then, a combination of color and gradient thresholds to generate a binary image (thresholding steps Section 4: Use color transforms, gradients, etc., to create a thresholded binary image in IPython notebook).  Here's an example image on different color map channel
 
 ![alt text][image3]
 
-Based on the above image, the following channel are selected: l-channel, and b-channel. x-derivative v-channel was removed after fine-tuning.  The the image will be converted as binary as following:
+Based on the above image, the following channel are selected: l-channel, and b-channel. x-derivative s-channel was removed after fine-tuning.  The the image will be converted as binary as following:
 
 ![alt text][image5]
+
+![alt text][image8]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
 Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+After getting binary image, it starts the followings to get lane lines:
+1. Get histogram of bottom 1/4 binary image.
+2. Take maximum of histogram on left side image as start point of left lane, similiar for right lane.
+3. Based on the center of lane line, draw rectangle window (with center window height) of interest area to get points.
+4. From the points extracted from step 3, re-calculate the center point, then draw another window to repeat step 3, until it reach the top of image.
+5. Then take all the points in these windows, to fit 2nd order polynomial line.  Left and right lines are separate.
 
 ![alt text][image6]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
 I did this in function detectLanesWithPreFram and detectLanesWithoutPreFrame in `utils.py`
-1. detectLanesWithoutPreFrame: used to calculate curvature without previous image knowledge
-2. detectLanesWithPreFram: used to calculate curvature by using margin based on previous image curvature
+For detectLanesWithoutPreFrame function:
+1. It will follow the instruction on Section 4, to get 2nd order polynomial left and right lanes.
+
+For detectLanesWithPreFram:
+For detectLanesWithPreFram function: 
+1. it will take the polyfit in last image as reference.  Based on the assumption that the two continuous images in video have very similar lane curvatures.  Thus, it will use the polyfit as baseline to extract interest points.  Then, calculate curvature.
+
+With 2nd polynomial fit, then it can covert polynomial coefficients from pixels to meters here:
+    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
+    
+Then calculate the curvature on the position of vehicle, y-corrodinate 700 is take here, since it is zero-based in "birds-eye" image.
+ left_curv = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+ right_curv = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
@@ -129,4 +153,13 @@ Here's a [link to my video result](./challenge_video_output.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.
+
+The treshold on combination of colomap image, need to fine-tuning based on different images.  For example, for project_video, it has better environment -- relatively unique environment, no shadow, and discruptive road surface.  So it has more tolorence about these parameters selection.  Through this project, it is found that different threshold parameters fits for different environments. 
+
+Back to chanllenge_video, it can be found that there is a couple of seconds that fit line does not fit totally at far end of road.  It is caused that binary image generation also consider the left side corner line.  Thus we may need to improve the image precess method to avoid this line.
+
+The implementation here also based on assumption that there is no line between left/right lane, for example, for left-turn/straight lane, it may have two left/right lanes.  Then the implementation will fail.
+Moreover, like in challenge_video, if discruptive line on road surface has similar color, then the implementation will also fail.  
+Since the distance b/w left and right line is fixed, we can use it to select interest windows. For example, if we found that there is one peak in right side of binary image, but two in left side, then we can select one based on distance.
+
