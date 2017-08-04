@@ -127,12 +127,14 @@ With 2nd polynomial fit, then it can covert polynomial coefficients from pixels 
     right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
     
 Then calculate the curvature on the position of vehicle, y-corrodinate 700 is take here, since it is zero-based in "birds-eye" image.
+
  left_curv = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+ 
  right_curv = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in function process_image in main.py.  About plot back on original image, function drawDetectedBoundary in util.py was employed.  Here is an example of my result on a test image:
 
 ![alt text][image7]
 
