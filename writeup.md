@@ -92,7 +92,7 @@ Then, a combination of color and gradient thresholds to generate a binary image 
 
 ![alt text][image3]
 
-Based on the above image, the following channel are selected: l-channel, and b-channel. x-derivative s-channel was removed after fine-tuning.  The the image will be converted as binary as following:
+Based on the above image, the following channel are selected: l-channel, and b-channel and x-derivative s-channel.  The the image will be converted as binary as following:
 
 ![alt text][image5]
 
@@ -121,7 +121,9 @@ For detectLanesWithPreFram function:
 1. it will take the polyfit in last image as reference.  Based on the assumption that the two continuous images in video have very similar lane curvatures.  Thus, it will use the polyfit as baseline to extract interest points.  Then, calculate curvature.
 
 With 2nd polynomial fit, then it can covert polynomial coefficients from pixels to meters here:
+
     left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
+    
     right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
     
 Then calculate the curvature on the position of vehicle, y-corrodinate 700 is take here, since it is zero-based in "birds-eye" image.
